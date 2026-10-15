@@ -1,0 +1,52 @@
+@{
+    ViewData["Title"] = "Create Account - PaisaFlow";
+    var error = ViewBag.ErrorMessage as string;
+}
+
+<div style="min-height: 80vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px 0;">
+    <!-- Logo & Brand -->
+    <div style="text-align: center; margin-bottom: 24px;">
+        <div style="width: 68px; height: 68px; border-radius: 22px; background: linear-gradient(135deg, #30D158, #0A84FF); display: inline-flex; align-items: center; justify-content: center; font-size: 2.2rem; box-shadow: 0 12px 30px rgba(48, 209, 88, 0.4); margin-bottom: 12px;">
+            ✨
+        </div>
+        <h1 style="font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; margin: 0;">Create Account</h1>
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin: 4px 0 0;">Start managing your personal finances in seconds.</p>
+    </div>
+
+    <!-- Register Glass Card -->
+    <div class="glass-card" style="width: 100%; max-width: 420px; padding: 28px 24px; border-radius: 30px;">
+        @if (!string.IsNullOrWhiteSpace(error))
+        {
+            <div style="background: rgba(239, 68, 68, 0.18); border: 1px solid rgba(239, 68, 68, 0.35); color: #fca5a5; padding: 10px 14px; border-radius: 14px; font-size: 0.85rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                <i class="bi bi-exclamation-circle-fill"></i>
+                <span>@error</span>
+            </div>
+        }
+
+        <form asp-controller="Account" asp-action="Register" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="sheet-field" style="margin-bottom: 14px;">
+                <i class="bi bi-person"></i>
+                <input type="text" name="fullName" class="sheet-input" placeholder="Full Name (e.g. John Doe)" required autofocus />
+            </div>
+
+            <div class="sheet-field" style="margin-bottom: 14px;">
+                <i class="bi bi-envelope"></i>
+                <input type="email" name="email" class="sheet-input" placeholder="Email address" required />
+            </div>
+
+            <div class="sheet-field" style="margin-bottom: 20px;">
+                <i class="bi bi-lock"></i>
+                <input type="password" name="password" class="sheet-input" placeholder="Create a Password" required />
+            </div>
+
+            <button type="submit" class="btn-save-main" style="margin-top: 0; background: linear-gradient(135deg, #30D158, #059669); box-shadow: 0 8px 24px rgba(48, 209, 88, 0.4);">CREATE ACCOUNT</button>
+        </form>
+
+        <div style="text-align: center; margin-top: 20px; font-size: 0.88rem; color: var(--text-muted);">
+            Already have an account? 
+            <a asp-controller="Account" asp-action="Login" style="color: var(--accent-blue); font-weight: 700; text-decoration: none;">Sign In</a>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,111 @@
+@model List<PaisaFlow.Core.Entities.Transaction>
+@{
+    ViewData["Title"] = "Calendar View";
+    var month = (int)ViewBag.Month;
+    var year = (int)ViewBag.Year;
+    var monthName = (string)ViewBag.MonthName;
+    var daysInMonth = (int)ViewBag.DaysInMonth;
+    var firstDayOfWeek = (int)ViewBag.FirstDayOfWeek; // 0 = Sun, 1 = Mon ...
+    var dayTotals = (Dictionary<int, decimal>)ViewBag.DayTotals;
+    var selectedDay = (int)ViewBag.SelectedDay;
+    var selectedDayTotal = (decimal)ViewBag.SelectedDayTotal;
+    var selectedDayDate = (DateTime)ViewBag.SelectedDayDate;
+
+    // Convert to Monday-first: 1=Mon, 2=Tue ... 7=Sun
+    var offset = (firstDayOfWeek == 0) ? 6 : (firstDayOfWeek - 1);
+}
+
+<div class="ios-header">
+    <div>
+        <a asp-controller="Dashboard" asp-action="Index" class="section-link" style="font-size: 0.95rem;">‹ Dashboard</a>
+        <div class="user-name" style="margin-top: 4px;">@monthName</div>
+    </div>
+    <div class="header-actions">
+        <button type="button" class="icon-btn-glass" data-open-add-expense title="Add Expense">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Calendar Grid Card -->
+<div class="glass-card" style="padding: 20px 16px; border-radius: 28px; margin-bottom: 22px;">
+    <!-- Weekday headers -->
+    <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 0.78rem; font-weight: 700; color: var(--text-muted); margin-bottom: 12px;">
+        <div>Mo</div>
+        <div>Tu</div>
+        <div>We</div>
+        <div>Th</div>
+        <div>Fr</div>
+        <div>Sa</div>
+        <div>Su</div>
+    </div>
+
+    <!-- Calendar days -->
+    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center;">
+        @for (int i = 0; i < offset; i++)
+        {
+            <div style="height: 42px;"></div>
+        }
+
+        @for (int day = 1; day <= daysInMonth; day++)
+        {
+            var hasSpend = dayTotals.ContainsKey(day) && dayTotals[day] > 0;
+            var isSelected = day == selectedDay;
+
+            <a asp-controller="Calendar" asp-action="Index" asp-route-month="@month" asp-route-year="@year" asp-route-selectedDay="@day"
+               style="height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; border-radius: 14px; position: relative; color: inherit; transition: all 0.2s ease;
+                      background: @(isSelected ? "var(--accent-blue)" : (hasSpend ? "var(--glass-bg-subtle)" : "transparent"));
+                      color: @(isSelected ? "#ffffff" : "var(--text-primary)");
+                      border: 1px solid @(isSelected ? "var(--accent-blue)" : (hasSpend ? "var(--glass-border)" : "transparent"));">
+                <span style="font-size: 0.95rem; font-weight: @(isSelected ? "800" : "600");">@day</span>
+                @if (hasSpend)
+                {
+                    <span style="width: 5px; height: 5px; border-radius: 50%; background: @(isSelected ? "#ffffff" : "var(--accent-orange)"); position: absolute; bottom: 4px;"></span>
+                }
+            </a>
+        }
+    </div>
+</div>
+
+<!-- Selected Day Breakdown -->
+<div class="section-header">
+    <div>
+        <h2 class="section-title">@selectedDayDate.ToString("dd MMMM")</h2>
+        <div style="font-size: 0.85rem; color: var(--text-secondary);">Daily total: <strong style="color: var(--text-primary);">₹@selectedDayTotal.ToString("N0")</strong></div>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="glass-card" style="padding: 24px; text-align: center; border-radius: 24px;">
+        <div style="font-size: 1.8rem; margin-bottom: 6px;">🌴</div>
+        <div style="font-size: 0.95rem; color: var(--text-muted);">No expenses recorded on this day.</div>
+    </div>
+}
+else
+{
+    <div class="tx-list">
+        @foreach (var tx in Model)
+        {
+            var isIncome = tx.Type == PaisaFlow.Core.Enums.TransactionType.Income;
+            var icon = tx.Category?.Icon ?? (isIncome ? "💼" : "💸");
+            var title = !string.IsNullOrWhiteSpace(tx.Note) ? tx.Note : (tx.Category?.Name ?? "Transaction");
+
+            <div class="glass-card tx-row">
+                <div class="tx-left">
+                    <div class="tx-icon-circle">@icon</div>
+                    <div class="tx-meta">
+                        <div class="tx-title">@title</div>
+                        <div class="tx-sub">@(tx.Category?.Name ?? "General") &bull; @tx.PaymentMethod</div>
+                    </div>
+                </div>
+                <div class="tx-right">
+                    <div class="tx-amount @(isIncome ? "income" : "expense")">
+                        @(isIncome ? "+ " : "")₹@tx.Amount.ToString("N0")
+                    </div>
+                    <div class="tx-method-pill">@tx.Date.ToString("h:mm tt")</div>
+                </div>
+            </div>
+        }
+    </div>
+}

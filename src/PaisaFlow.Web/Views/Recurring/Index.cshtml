@@ -1,0 +1,141 @@
+@model List<PaisaFlow.Core.Entities.RecurringTransaction>
+@{
+    ViewData["Title"] = "Recurring Bills & Subscriptions";
+    var categories = ViewBag.Categories as List<PaisaFlow.Core.Entities.Category> ?? new();
+    var accounts = ViewBag.Accounts as List<PaisaFlow.Core.Entities.Account> ?? new();
+}
+
+<div class="ios-header">
+    <div>
+        <a asp-controller="Dashboard" asp-action="Index" class="section-link" style="font-size: 0.95rem;">‹ Dashboard</a>
+        <div class="user-name" style="margin-top: 4px;">Recurring Expenses</div>
+    </div>
+    <div class="header-actions">
+        <button type="button" class="icon-btn-glass" onclick="document.getElementById('newRecurringModal').classList.add('show')" title="Add Recurring Expense">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+    </div>
+</div>
+
+<div class="glass-card" style="padding: 16px 20px; border-radius: 22px; margin-bottom: 20px; background: rgba(99, 102, 241, 0.12); border-color: rgba(99, 102, 241, 0.25);">
+    <div style="font-size: 0.88rem; font-weight: 600; color: #a5b4fc; display: flex; align-items: center; gap: 8px;">
+        <i class="bi bi-arrow-repeat"></i>
+        <span>Auto-generates transactions on their due date every month.</span>
+    </div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 30px;">
+    @foreach (var item in Model)
+    {
+        var icon = item.Category?.Icon ?? "🔄";
+
+        <div class="glass-card" style="padding: 18px 20px; border-radius: 26px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 1.8rem;">@icon</span>
+                    <div>
+                        <div style="font-size: 1.1rem; font-weight: 700;">@item.Title</div>
+                        <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">
+                            Every month &bull; @item.DayOfMonth@(item.DayOfMonth == 1 ? "st" : (item.DayOfMonth == 2 ? "nd" : (item.DayOfMonth == 3 ? "rd" : "th")))
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align: right;">
+                    <div style="font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em;">
+                        ₹@item.Amount.ToString("N0")
+                    </div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
+                        via @item.PaymentMethod
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--glass-border);">
+                <span style="font-size: 0.8rem; color: var(--text-muted);">
+                    Next due: <strong style="color: var(--text-primary);">@item.NextDueDate.ToString("MMM d, yyyy")</strong>
+                </span>
+
+                <div style="display: flex; gap: 8px;">
+                    <form asp-controller="Recurring" asp-action="ProcessNow" asp-route-id="@item.Id" method="post" style="display: inline;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="quick-add-btn" style="padding: 4px 12px; font-size: 0.78rem; background: var(--accent-blue);">
+                            ⚡ Pay Now
+                        </button>
+                    </form>
+                    <form asp-controller="Recurring" asp-action="Delete" asp-route-id="@item.Id" method="post" onsubmit="return confirm('Remove recurring bill?');" style="display: inline;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px;" title="Delete">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Modal: New Recurring Expense -->
+<div id="newRecurringModal" class="ios-modal-backdrop">
+    <div class="ios-bottom-sheet glass-card">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <div class="sheet-title">New Recurring Bill</div>
+            <button type="button" class="icon-btn-glass" onclick="document.getElementById('newRecurringModal').classList.remove('show')" style="width: 36px; height: 36px;">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <form asp-controller="Recurring" asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="sheet-field">
+                <i class="bi bi-card-text"></i>
+                <input type="text" name="title" class="sheet-input" placeholder="Title (e.g. Netflix, Wifi, House Rent)" required />
+            </div>
+
+            <div class="sheet-field">
+                <i class="bi bi-currency-rupee"></i>
+                <input type="number" step="0.01" name="amount" class="sheet-input" placeholder="Amount (₹)" required />
+            </div>
+
+            <div class="sheet-field">
+                <i class="bi bi-tag"></i>
+                <select name="categoryId" class="sheet-select">
+                    @foreach (var c in categories)
+                    {
+                        <option value="@c.Id">@c.Icon @c.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="sheet-field">
+                <i class="bi bi-bank"></i>
+                <select name="accountId" class="sheet-select">
+                    @foreach (var a in accounts)
+                    {
+                        <option value="@a.Id">@a.Icon @a.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="sheet-field">
+                <i class="bi bi-calendar-day"></i>
+                <input type="number" min="1" max="31" name="dayOfMonth" class="sheet-input" placeholder="Day of Month (1 - 31)" value="1" required />
+            </div>
+
+            <div class="sheet-field">
+                <i class="bi bi-credit-card"></i>
+                <select name="paymentMethod" class="sheet-select">
+                    <option value="UPI">UPI</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Credit Card">Credit Card</option>
+                    <option value="Debit Card">Debit Card</option>
+                    <option value="Cash">Cash</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-save-main" style="margin-top: 10px;">SAVE RECURRING BILL</button>
+        </form>
+    </div>
+</div>

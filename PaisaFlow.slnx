@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PaisaFlow.Core/PaisaFlow.Core.csproj" />
+    <Project Path="src/PaisaFlow.Infrastructure/PaisaFlow.Infrastructure.csproj" />
+    <Project Path="src/PaisaFlow.Web/PaisaFlow.Web.csproj" />
+  </Folder>
+</Solution>

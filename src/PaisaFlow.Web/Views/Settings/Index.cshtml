@@ -1,0 +1,279 @@
+@model PaisaFlow.Core.Entities.UserAccount
+@{
+    ViewData["Title"] = "Settings";
+    var accounts = ViewBag.Accounts as List<PaisaFlow.Core.Entities.Account> ?? new();
+    var categories = ViewBag.Categories as List<PaisaFlow.Core.Entities.Category> ?? new();
+}
+
+<div class="ios-header">
+    <div>
+        <a asp-controller="Dashboard" asp-action="Index" class="section-link" style="font-size: 0.95rem;">‹ Dashboard</a>
+        <div class="user-name" style="margin-top: 4px;">Preferences</div>
+    </div>
+</div>
+
+<!-- Profile & Currency Section -->
+<div class="glass-card" style="padding: 22px; border-radius: 28px; margin-bottom: 20px;">
+    <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 18px;">
+        <div style="width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(135deg, #0A84FF, #BF5AF2); display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #fff; font-weight: 800;">
+            @(Model?.FullName?.Substring(0, 1).ToUpper() ?? "H")
+        </div>
+        <div>
+            <div style="font-size: 1.2rem; font-weight: 700;">@(Model?.FullName ?? "Harsh")</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">@(Model?.Email ?? "harsh@example.com")</div>
+        </div>
+    </div>
+
+    <form asp-controller="Settings" asp-action="UpdateProfile" method="post">
+        @Html.AntiForgeryToken()
+        <div class="sheet-field">
+            <i class="bi bi-person"></i>
+            <input type="text" name="fullName" class="sheet-input" value="@Model?.FullName" placeholder="Your Name" required />
+        </div>
+        <div class="sheet-field">
+            <i class="bi bi-currency-exchange"></i>
+            <select name="currency" class="sheet-select">
+                <option value="₹" selected="@(Model?.Currency == "₹")">₹ Indian Rupee (INR)</option>
+                <option value="$" selected="@(Model?.Currency == "$")">$ US Dollar (USD)</option>
+                <option value="€" selected="@(Model?.Currency == "€")">€ Euro (EUR)</option>
+                <option value="£" selected="@(Model?.Currency == "£")">£ British Pound (GBP)</option>
+            </select>
+        </div>
+        <div class="sheet-field">
+            <i class="bi bi-bullseye"></i>
+            <input type="number" step="500" name="monthlyBudgetLimit" class="sheet-input" value="@Model?.MonthlyBudgetLimit" placeholder="Monthly Spending Budget" required />
+        </div>
+
+        <button type="submit" class="btn-save-main" style="padding: 12px; font-size: 0.95rem; margin-top: 6px;">SAVE PROFILE</button>
+    </form>
+</div>
+
+<!-- Accounts List -->
+<div class="section-header">
+    <h2 class="section-title">Accounts & Wallets</h2>
+    <button type="button" class="section-link" style="background: none; border: none; cursor: pointer;" onclick="document.getElementById('newAccountModal').classList.add('show')">+ Add Account</button>
+</div>
+
+<div class="glass-card" style="padding: 14px 18px; border-radius: 26px; margin-bottom: 22px;">
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+        @foreach (var acc in accounts)
+        {
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 1.6rem;">@acc.Icon</span>
+                    <div>
+                        <div style="font-size: 0.98rem; font-weight: 700;">@acc.Name</div>
+                        <div style="font-size: 0.78rem; color: var(--text-muted);">@acc.Type @(acc.AccountNumberSuffix != null ? $"&bull; {acc.AccountNumberSuffix}" : "")</div>
+                    </div>
+                </div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: var(--text-primary);">
+                    ₹@acc.Balance.ToString("N0")
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Categories & Custom Category -->
+<div class="section-header">
+    <h2 class="section-title">Categories (@categories.Count)</h2>
+    <button type="button" class="section-link" style="background: none; border: none; cursor: pointer;" onclick="document.getElementById('newCategoryModal').classList.add('show')">+ New Category</button>
+</div>
+
+<div class="glass-card" style="padding: 14px 16px; border-radius: 26px; margin-bottom: 22px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        @foreach (var cat in categories)
+        {
+            <span style="background: var(--glass-bg-subtle); border: 1px solid var(--glass-border); padding: 6px 12px; border-radius: var(--pill-radius); font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                <span>@cat.Icon</span> @cat.Name
+            </span>
+        }
+    </div>
+</div>
+
+<!-- Security & Privacy Section -->
+<div class="section-header">
+    <h2 class="section-title">Security & Privacy</h2>
+</div>
+
+<div class="glass-card" style="padding: 18px 20px; border-radius: 26px; margin-bottom: 22px; display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="bi bi-fingerprint" style="font-size: 1.4rem; color: var(--accent-blue);"></i>
+            <div>
+                <div style="font-size: 0.95rem; font-weight: 700;">Face ID / Biometric Lock</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">Protect app with PIN or Face ID</div>
+            </div>
+        </div>
+        <input type="checkbox" checked style="width: 20px; height: 20px; accent-color: var(--accent-blue);" />
+    </div>
+
+    <div style="height: 1px; background: var(--glass-border);"></div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="bi bi-cloud-check-fill" style="font-size: 1.4rem; color: var(--accent-green);"></i>
+            <div>
+                <div style="font-size: 0.95rem; font-weight: 700;">Cloud Auto Backup</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">Sync financial history safely</div>
+            </div>
+        </div>
+        <span style="font-size: 0.8rem; font-weight: 700; color: var(--accent-green);">ACTIVE</span>
+    </div>
+</div>
+
+<!-- Data Export & Backup Section -->
+<div class="section-header">
+    <h2 class="section-title">Data Export & Backup</h2>
+</div>
+
+<div class="glass-card" style="padding: 18px 20px; border-radius: 26px; margin-bottom: 30px;">
+    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
+        Export your data anytime so you never feel locked in. Ideal for taxes, accounting, or offline records.
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px;">
+        <a asp-controller="Export" asp-action="Csv" class="quick-add-btn" style="background: var(--glass-bg-subtle); border: 1px solid var(--glass-border); color: var(--text-primary); text-decoration: none; justify-content: center;">
+            <i class="bi bi-filetype-csv"></i> CSV
+        </a>
+        <a asp-controller="Export" asp-action="Excel" class="quick-add-btn" style="background: var(--glass-bg-subtle); border: 1px solid var(--glass-border); color: var(--text-primary); text-decoration: none; justify-content: center;">
+            <i class="bi bi-filetype-xls"></i> Excel
+        </a>
+        <a asp-controller="Export" asp-action="Backup" class="quick-add-btn" style="background: var(--glass-bg-subtle); border: 1px solid var(--glass-border); color: var(--text-primary); text-decoration: none; justify-content: center;">
+            <i class="bi bi-filetype-json"></i> JSON
+        </a>
+    </div>
+
+    <!-- Restore Backup Form -->
+    <form asp-controller="Export" asp-action="Restore" method="post" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">RESTORE FROM JSON BACKUP</div>
+        <div style="display: flex; gap: 8px;">
+            <input type="file" name="backupFile" accept=".json" class="sheet-input" style="padding: 8px; background: var(--glass-bg-subtle); border-radius: 12px; font-size: 0.8rem;" required />
+            <button type="submit" class="quick-add-btn" style="background: var(--accent-blue); padding: 8px 16px;">Restore</button>
+        </div>
+    </form>
+</div>
+
+<!-- Danger Zone: Data Reset Options -->
+<div class="section-header">
+    <h2 class="section-title" style="color: var(--accent-red);">Danger Zone & Data Reset</h2>
+</div>
+
+<div class="glass-card" style="padding: 20px; border-radius: 26px; margin-bottom: 30px; border-color: rgba(255, 69, 58, 0.3); background: rgba(255, 69, 58, 0.05);">
+    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+        Choose how you want to reset your data. All actions apply strictly to your personal account.
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+        <!-- Option 1: Clear Transactions Only -->
+        <form asp-controller="Settings" asp-action="ResetTransactions" method="post" onsubmit="return confirm('⚠️ Are you sure you want to delete all transactions and reset account balances to ₹0? Custom categories and accounts will be kept.');">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn-save-main" style="background: rgba(255, 159, 10, 0.15); border: 1px solid var(--accent-orange); color: var(--accent-orange); box-shadow: none; padding: 12px; font-size: 0.92rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <i class="bi bi-clock-history"></i> Clear Transactions & History Only
+            </button>
+        </form>
+
+        <!-- Option 2: Full Factory Reset -->
+        <form asp-controller="Settings" asp-action="FactoryReset" method="post" onsubmit="return confirm('🚨 FULL RESET WARNING: This will permanently delete ALL transactions, budgets, recurring bills, and custom categories, giving you a completely fresh, empty account. Continue?');">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn-save-main" style="background: rgba(255, 69, 58, 0.15); border: 1px solid var(--accent-red); color: var(--accent-red); box-shadow: none; padding: 12px; font-size: 0.92rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <i class="bi bi-trash3-fill"></i> Factory Reset (Start 100% Fresh)
+            </button>
+        </form>
+
+        <!-- Option 3: Restore Demo Data -->
+        <form asp-controller="Settings" asp-action="RestoreDemoData" method="post" onsubmit="return confirm('Restore the pre-loaded October 2026 demo dataset (₹18,420 spending, Goa Trip Split, Budgets)?');">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn-save-main" style="background: rgba(10, 132, 255, 0.15); border: 1px solid var(--accent-blue); color: var(--accent-blue); box-shadow: none; padding: 12px; font-size: 0.92rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <i class="bi bi-arrow-counterclockwise"></i> Restore Demo Seed Data (October 2026)
+            </button>
+        </form>
+
+        <!-- Logout -->
+        <div style="height: 1px; background: var(--glass-border); margin: 6px 0;"></div>
+        <a asp-controller="Account" asp-action="Logout" class="btn-save-main" style="background: var(--glass-bg-subtle); border: 1px solid var(--glass-border); color: var(--text-primary); text-decoration: none; text-align: center; box-shadow: none; padding: 12px; font-size: 0.92rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <i class="bi bi-box-arrow-right"></i> Sign Out
+        </a>
+    </div>
+</div>
+
+<!-- Modal: New Category -->
+<div id="newCategoryModal" class="ios-modal-backdrop">
+    <div class="ios-bottom-sheet glass-card">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <div class="sheet-title">Create Category</div>
+            <button type="button" class="icon-btn-glass" onclick="document.getElementById('newCategoryModal').classList.remove('show')" style="width: 36px; height: 36px;">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <form asp-controller="Settings" asp-action="CreateCategory" method="post">
+            @Html.AntiForgeryToken()
+            <div class="sheet-field">
+                <i class="bi bi-tag"></i>
+                <input type="text" name="name" class="sheet-input" placeholder="Category Name (e.g. Gym & Fitness)" required />
+            </div>
+            <div class="sheet-field">
+                <i class="bi bi-emoji-smile"></i>
+                <input type="text" name="icon" class="sheet-input" placeholder="Emoji Icon (e.g. 🏋️)" value="📦" required />
+            </div>
+            <div class="sheet-field">
+                <i class="bi bi-palette"></i>
+                <input type="color" name="color" value="#6366F1" style="border: none; background: transparent; height: 30px; width: 40px; cursor: pointer;" />
+                <span style="font-size: 0.85rem; color: var(--text-muted);">Pick Badge Color</span>
+            </div>
+            <div class="sheet-field">
+                <i class="bi bi-arrow-left-right"></i>
+                <select name="type" class="sheet-select">
+                    <option value="1">Expense</option>
+                    <option value="2">Income</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-save-main" style="margin-top: 10px;">CREATE CATEGORY</button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: New Account -->
+<div id="newAccountModal" class="ios-modal-backdrop">
+    <div class="ios-bottom-sheet glass-card">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <div class="sheet-title">Add Account</div>
+            <button type="button" class="icon-btn-glass" onclick="document.getElementById('newAccountModal').classList.remove('show')" style="width: 36px; height: 36px;">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <form asp-controller="Settings" asp-action="CreateAccount" method="post">
+            @Html.AntiForgeryToken()
+            <div class="sheet-field">
+                <i class="bi bi-bank"></i>
+                <input type="text" name="name" class="sheet-input" placeholder="Account Name (e.g. ICICI Bank, Paytm)" required />
+            </div>
+            <div class="sheet-field">
+                <i class="bi bi-currency-rupee"></i>
+                <input type="number" step="0.01" name="initialBalance" class="sheet-input" placeholder="Initial Balance (₹)" value="0" required />
+            </div>
+            <div class="sheet-field">
+                <i class="bi bi-collection"></i>
+                <select name="type" class="sheet-select">
+                    <option value="1">Bank Account</option>
+                    <option value="2">Cash</option>
+                    <option value="3">Credit Card</option>
+                    <option value="4">UPI Account</option>
+                    <option value="5">Wallet</option>
+                </select>
+            </div>
+            <div class="sheet-field">
+                <i class="bi bi-emoji-smile"></i>
+                <input type="text" name="icon" class="sheet-input" placeholder="Emoji (e.g. 🏦, 💳, 💵)" value="🏦" required />
+            </div>
+            <div class="sheet-field">
+                <i class="bi bi-123"></i>
+                <input type="text" name="suffix" class="sheet-input" placeholder="Last 4 Digits (Optional, e.g. 9421)" />
+            </div>
+            <button type="submit" class="btn-save-main" style="margin-top: 10px;">ADD ACCOUNT</button>
+        </form>
+    </div>
+</div>

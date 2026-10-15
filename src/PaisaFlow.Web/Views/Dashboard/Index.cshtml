@@ -1,0 +1,164 @@
+@model PaisaFlow.Core.DTOs.DashboardSummaryDto
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<!-- Top iOS Header -->
+<div class="ios-header">
+    <div>
+        <div class="user-greeting">@Model.Greeting, @Model.UserName 👋</div>
+        <div class="user-name">@Model.MonthName</div>
+    </div>
+    <div class="header-actions">
+        <button type="button" id="toggleHideBalanceBtn" class="icon-btn-glass" title="Hide/Unhide Balance">
+            <i class="bi bi-eye@(Model.HideBalance ? "-slash" : "")"></i>
+        </button>
+        <button type="button" id="themeToggleBtn" class="icon-btn-glass" title="Toggle Theme">
+            <i class="bi bi-moon-stars"></i>
+        </button>
+        <a asp-controller="Calendar" asp-action="Index" class="icon-btn-glass" title="Calendar View">
+            <i class="bi bi-calendar-event"></i>
+        </a>
+    </div>
+</div>
+
+<!-- Smart Quick Add Bar -->
+<div class="glass-card quick-add-bar">
+    <i class="bi bi-lightning-charge-fill" style="color: var(--accent-orange); font-size: 1.2rem;"></i>
+    <form id="quickAddForm" style="display: flex; flex: 1; align-items: center; gap: 8px;">
+        @Html.AntiForgeryToken()
+        <input type="text" id="quickAddInput" class="quick-add-input" placeholder="Quick Add: '500 lunch UPI'..." autocomplete="off" />
+        <button type="submit" class="quick-add-btn">
+            <i class="bi bi-plus-lg"></i> Add
+        </button>
+    </form>
+</div>
+<div id="quickAddPreview" style="display: none; font-size: 0.85rem; padding: 4px 16px 12px; color: var(--accent-blue);"></div>
+
+<!-- Total Balance Hero Card -->
+<div class="glass-card balance-card">
+    <div class="balance-title">
+        <span>Total Balance</span>
+        <span style="font-size: 0.8rem; color: var(--text-muted);"><i class="bi bi-shield-check"></i> Encrypted</span>
+    </div>
+
+    <div class="balance-amount @(Model.HideBalance ? "masked-balance" : "")">
+        @(Model.HideBalance ? "₹••••••" : $"₹{Model.TotalBalance:N0}")
+    </div>
+
+    <div class="balance-pill">
+        <i class="bi bi-arrow-up-right"></i>
+        <span>↑ ₹4,250 this month</span>
+    </div>
+
+    <div class="income-expense-divider"></div>
+
+    <div class="income-expense-row">
+        <div class="stat-item">
+            <div class="stat-label">
+                <i class="bi bi-arrow-down-left-circle-fill val-income"></i>
+                Income
+            </div>
+            <div class="stat-val val-income">₹@Model.CurrentMonthIncome.ToString("N0")</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">
+                <i class="bi bi-arrow-up-right-circle-fill val-expense"></i>
+                Expenses
+            </div>
+            <div class="stat-val val-expense">₹@Model.CurrentMonthExpenses.ToString("N0")</div>
+        </div>
+    </div>
+
+    <!-- Monthly Budget Progress -->
+    <div class="budget-progress-section">
+        <div class="budget-progress-header">
+            <span style="color: var(--text-secondary);">Budget remaining</span>
+            <span style="color: var(--text-primary); font-weight: 700;">
+                ₹@Model.BudgetRemaining.ToString("N0") / ₹@Model.MonthlyBudget.ToString("N0")
+            </span>
+        </div>
+        <div class="budget-track">
+            <div class="budget-fill @(Model.IsBudgetWarning ? "warning" : "")" style="width: @Model.BudgetUsedPercent%;"></div>
+        </div>
+        @if (Model.IsBudgetWarning)
+        {
+            <div style="font-size: 0.82rem; color: var(--accent-orange); margin-top: 8px; display: flex; align-items: center; gap: 6px;">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span>You've used @Model.BudgetUsedPercent% of your monthly budget.</span>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Quick Features Hub -->
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 22px;">
+    <a asp-controller="Calendar" asp-action="Index" class="glass-card" style="padding: 12px 6px; text-align: center; text-decoration: none; color: inherit;">
+        <div style="font-size: 1.5rem; margin-bottom: 4px;">📅</div>
+        <div style="font-size: 0.76rem; font-weight: 600; color: var(--text-secondary);">Calendar</div>
+    </a>
+    <a asp-controller="Split" asp-action="Index" class="glass-card" style="padding: 12px 6px; text-align: center; text-decoration: none; color: inherit;">
+        <div style="font-size: 1.5rem; margin-bottom: 4px;">🌴</div>
+        <div style="font-size: 0.76rem; font-weight: 600; color: var(--text-secondary);">Goa Split</div>
+    </a>
+    <a asp-controller="Budgets" asp-action="Index" class="glass-card" style="padding: 12px 6px; text-align: center; text-decoration: none; color: inherit;">
+        <div style="font-size: 1.5rem; margin-bottom: 4px;">🎯</div>
+        <div style="font-size: 0.76rem; font-weight: 600; color: var(--text-secondary);">Budgets</div>
+    </a>
+    <a asp-controller="Recurring" asp-action="Index" class="glass-card" style="padding: 12px 6px; text-align: center; text-decoration: none; color: inherit;">
+        <div style="font-size: 1.5rem; margin-bottom: 4px;">🔄</div>
+        <div style="font-size: 0.76rem; font-weight: 600; color: var(--text-secondary);">Recurring</div>
+    </a>
+</div>
+
+<!-- Spending Overview (Top Categories) -->
+<div class="section-header">
+    <h2 class="section-title">Spending Overview</h2>
+    <a asp-controller="Analytics" asp-action="Index" class="section-link">Insights ›</a>
+</div>
+
+<div class="category-scroll-grid">
+    @foreach (var cat in Model.TopCategories)
+    {
+        <div class="glass-card cat-tile">
+            <div class="cat-tile-top">
+                <span class="cat-emoji">@cat.Icon</span>
+                <span class="cat-badge">@cat.PercentageOfTotal%</span>
+            </div>
+            <div class="cat-name">@cat.Name</div>
+            <div class="cat-amount">₹@cat.TotalAmount.ToString("N0")</div>
+        </div>
+    }
+</div>
+
+<!-- Recent Activity -->
+<div class="section-header">
+    <h2 class="section-title">Recent Activity</h2>
+    <a asp-controller="Transactions" asp-action="Index" class="section-link">View All ›</a>
+</div>
+
+<div class="tx-list">
+    @foreach (var tx in Model.RecentTransactions)
+    {
+        var isIncome = tx.Type == PaisaFlow.Core.Enums.TransactionType.Income;
+        var icon = tx.Category?.Icon ?? (isIncome ? "💼" : "💸");
+        var title = !string.IsNullOrWhiteSpace(tx.Note) ? tx.Note : (tx.Category?.Name ?? "Transaction");
+        var subText = $"{tx.Category?.Name ?? "General"} &bull; {tx.PaymentMethod}";
+
+        <div class="glass-card tx-row">
+            <div class="tx-left">
+                <div class="tx-icon-circle">@icon</div>
+                <div class="tx-meta">
+                    <div class="tx-title">@title</div>
+                    <div class="tx-sub">@Html.Raw(subText)</div>
+                </div>
+            </div>
+            <div class="tx-right">
+                <div class="tx-amount @(isIncome ? "income" : "expense")">
+                    @(isIncome ? "+ " : "")₹@tx.Amount.ToString("N0")
+                </div>
+                <div class="tx-method-pill">@tx.Date.ToString("MMM d · h:mm tt")</div>
+            </div>
+        </div>
+    }
+</div>

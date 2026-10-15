@@ -1,0 +1,142 @@
+@model List<PaisaFlow.Core.Entities.Budget>
+@{
+    ViewData["Title"] = "Monthly Budgets";
+    var overallSpent = (decimal)(ViewBag.OverallSpent ?? 0m);
+    var categorySpent = ViewBag.CategorySpent as Dictionary<int, decimal> ?? new();
+    var categories = ViewBag.Categories as List<PaisaFlow.Core.Entities.Category> ?? new();
+    var monthName = ViewBag.MonthName as string ?? "October 2026";
+    var month = (int)(ViewBag.Month ?? DateTime.Now.Month);
+    var year = (int)(ViewBag.Year ?? DateTime.Now.Year);
+
+    var overallBudget = Model.FirstOrDefault(b => b.CategoryId == null);
+    var overallLimit = overallBudget?.LimitAmount ?? 42000m;
+    var overallRemaining = Math.Max(0, overallLimit - overallSpent);
+    var overallPercent = overallLimit > 0 ? (int)Math.Min(100, Math.Round((overallSpent / overallLimit) * 100)) : 0;
+}
+
+<div class="ios-header">
+    <div>
+        <a asp-controller="Dashboard" asp-action="Index" class="section-link" style="font-size: 0.95rem;">‹ Dashboard</a>
+        <div class="user-name" style="margin-top: 4px;">Budgets & Limits</div>
+    </div>
+    <div class="header-actions">
+        <button type="button" class="icon-btn-glass" data-bs-toggle="modal" onclick="document.getElementById('setBudgetModal').classList.add('show')" title="Set Budget">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Overall Monthly Budget Card -->
+<div class="glass-card balance-card">
+    <div class="balance-title">
+        <span>Overall Monthly Budget (@monthName)</span>
+        <span style="font-weight: 700; color: var(--accent-blue);">@overallPercent% Used</span>
+    </div>
+
+    <div class="balance-amount">
+        ₹@overallSpent.ToString("N0") <span style="font-size: 1.4rem; color: var(--text-muted); font-weight: 500;">/ ₹@overallLimit.ToString("N0")</span>
+    </div>
+
+    <div class="budget-track" style="height: 12px; margin: 16px 0 12px;">
+        <div class="budget-fill @(overallPercent >= 85 ? "warning" : "")" style="width: @overallPercent%;"></div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 600;">
+        <span style="color: var(--text-secondary);">₹@overallRemaining.ToString("N0") remaining</span>
+        @if (overallPercent >= 85)
+        {
+            <span style="color: var(--accent-orange); display: flex; align-items: center; gap: 4px;">
+                <i class="bi bi-exclamation-triangle-fill"></i> Approaching limit!
+            </span>
+        }
+    </div>
+</div>
+
+<!-- Category Budgets Section -->
+<div class="section-header">
+    <h2 class="section-title">Category Limits</h2>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 30px;">
+    @foreach (var b in Model.Where(b => b.CategoryId != null))
+    {
+        var cat = b.Category;
+        if (cat == null) continue;
+
+        var spent = categorySpent.ContainsKey(cat.Id) ? categorySpent[cat.Id] : 0m;
+        var limit = b.LimitAmount;
+        var remaining = Math.Max(0, limit - spent);
+        var percent = limit > 0 ? (int)Math.Min(100, Math.Round((spent / limit) * 100)) : 0;
+        var isNearLimit = percent >= b.AlertThresholdPercent;
+
+        <div class="glass-card" style="padding: 18px 20px; border-radius: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.6rem;">@cat.Icon</span>
+                    <div>
+                        <div style="font-size: 1.05rem; font-weight: 700;">@cat.Name</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">Limit: ₹@limit.ToString("N0")</div>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 1.15rem; font-weight: 800; letter-spacing: -0.02em;">
+                        ₹@spent.ToString("N0")
+                    </div>
+                    <div style="font-size: 0.8rem; color: @(remaining > 0 ? "var(--accent-green)" : "var(--accent-red)"); font-weight: 600;">
+                        ₹@remaining.ToString("N0") remaining
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="budget-track" style="height: 8px; margin: 10px 0 6px;">
+                <div class="budget-fill @(isNearLimit ? "warning" : "")" style="width: @percent%;"></div>
+            </div>
+
+            @if (isNearLimit)
+            {
+                <div style="font-size: 0.82rem; color: var(--accent-orange); margin-top: 8px; display: flex; align-items: center; gap: 6px; font-weight: 600;">
+                    <i class="bi bi-exclamation-circle-fill"></i>
+                    <span>⚠️ You've used @percent% of your @cat.Name budget.</span>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Modal to Set Budget -->
+<div id="setBudgetModal" class="ios-modal-backdrop">
+    <div class="ios-bottom-sheet glass-card">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <div class="sheet-title">Set Monthly Budget</div>
+            <button type="button" class="icon-btn-glass" onclick="document.getElementById('setBudgetModal').classList.remove('show')" style="width: 36px; height: 36px;">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <form asp-controller="Budgets" asp-action="Save" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="month" value="@month" />
+            <input type="hidden" name="year" value="@year" />
+
+            <div class="sheet-field">
+                <i class="bi bi-tag"></i>
+                <select name="categoryId" class="sheet-select">
+                    <option value="">🎯 Overall Monthly Budget</option>
+                    @foreach (var c in categories)
+                    {
+                        <option value="@c.Id">@c.Icon @c.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="sheet-field">
+                <i class="bi bi-currency-rupee"></i>
+                <input type="number" step="100" name="limitAmount" class="sheet-input" placeholder="Budget Limit Amount (e.g. 6000)" required />
+            </div>
+
+            <button type="submit" class="btn-save-main" style="margin-top: 14px;">SAVE BUDGET</button>
+        </form>
+    </div>
+</div>

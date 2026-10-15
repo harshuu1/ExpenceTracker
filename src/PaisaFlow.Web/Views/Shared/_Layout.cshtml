@@ -1,0 +1,150 @@
+@inject PaisaFlow.Infrastructure.Data.AppDbContext DbContext
+@using Microsoft.EntityFrameworkCore
+@{
+    var categories = await DbContext.Categories.OrderBy(c => c.DisplayOrder).ToListAsync();
+    var accounts = await DbContext.Accounts.ToListAsync();
+}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0e17" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>@ViewData["Title"] - PaisaFlow</title>
+
+    <!-- Google Fonts: Inter / SF Pro inspired -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5 Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <!-- iOS Glassmorphism CSS -->
+    <link rel="stylesheet" href="~/css/glassmorphism.css" />
+    <link rel="manifest" href="~/manifest.json" />
+</head>
+<body>
+    <!-- Dynamic Island Toast -->
+    <div id="iosToast" class="ios-toast"></div>
+
+    <!-- Main Container -->
+    <div class="ios-container">
+        @RenderBody()
+    </div>
+
+    <!-- Floating Translucent iOS Bottom Tab Bar -->
+    <nav class="ios-tab-bar">
+        <a asp-controller="Dashboard" asp-action="Index" class="tab-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "active" : "")">
+            <i class="bi bi-house-door-fill"></i>
+            <span>Home</span>
+        </a>
+        <a asp-controller="Analytics" asp-action="Index" class="tab-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Analytics" ? "active" : "")">
+            <i class="bi bi-pie-chart-fill"></i>
+            <span>Analytics</span>
+        </a>
+
+        <!-- Center Elevated Glass '+' Button -->
+        <div class="fab-center">
+            <button type="button" class="fab-btn" data-open-add-expense aria-label="Add Expense">
+                <i class="bi bi-plus-lg"></i>
+            </button>
+        </div>
+
+        <a asp-controller="Transactions" asp-action="Index" class="tab-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Transactions" ? "active" : "")">
+            <i class="bi bi-clock-history"></i>
+            <span>Activity</span>
+        </a>
+        <a asp-controller="Settings" asp-action="Index" class="tab-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Settings" ? "active" : "")">
+            <i class="bi bi-gear-fill"></i>
+            <span>Settings</span>
+        </a>
+    </nav>
+
+    <!-- Fast Add Expense Bottom Sheet Modal (< 5 seconds Entry) -->
+    <div id="addExpenseModal" class="ios-modal-backdrop">
+        <div class="ios-bottom-sheet glass-card">
+            <div class="sheet-handle"></div>
+
+            <div class="sheet-header">
+                <div class="sheet-title">Record Entry</div>
+                <button type="button" class="icon-btn-glass" data-close-modal style="width: 36px; height: 36px;">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- Segmented Control: Expense vs Income -->
+            <div class="ios-segmented">
+                <button type="button" class="segment-btn active" data-type="1">Expense</button>
+                <button type="button" class="segment-btn" data-type="2">Income</button>
+            </div>
+
+            <form id="addExpenseForm" asp-controller="Transactions" asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Type" id="selectedTxType" value="1" />
+                <input type="hidden" name="CategoryId" id="selectedCategoryId" value="@(categories.FirstOrDefault()?.Id ?? 1)" />
+
+                <!-- Large Amount Hero Input -->
+                <div class="amount-hero-input">
+                    <span class="currency-sym">₹</span>
+                    <input type="number" step="0.01" name="Amount" id="sheetAmountInput" class="amount-input-box" placeholder="0" autofocus required />
+                </div>
+
+                <!-- Category Chips (Top Fast Pickers) -->
+                <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">CATEGORY</div>
+                <div class="chips-grid">
+                    @foreach (var cat in categories.Take(8))
+                    {
+                        <div class="chip-item @(cat == categories.First() ? "active" : "")" data-cat-id="@cat.Id" data-cat-name="@cat.Name">
+                            <span class="chip-icon">@cat.Icon</span>
+                            <span class="chip-name">@cat.Name</span>
+                        </div>
+                    }
+                </div>
+
+                <!-- Account / Payment Method Selector -->
+                <div class="sheet-field">
+                    <i class="bi bi-credit-card"></i>
+                    <select name="PaymentMethod" class="sheet-select" id="sheetPaymentMethod">
+                        <option value="UPI" selected>💳 UPI</option>
+                        <option value="Cash">💵 Cash</option>
+                        <option value="Debit Card">💳 Debit Card</option>
+                        <option value="Credit Card">💳 Credit Card</option>
+                        <option value="Bank Transfer">🏦 Bank Transfer</option>
+                    </select>
+                </div>
+
+                <!-- Account linked -->
+                <div class="sheet-field">
+                    <i class="bi bi-bank"></i>
+                    <select name="AccountId" class="sheet-select">
+                        @foreach (var acc in accounts)
+                        {
+                            <option value="@acc.Id">@acc.Icon @acc.Name (₹@acc.Balance.ToString("N0"))</option>
+                        }
+                    </select>
+                </div>
+
+                <!-- Note / Description -->
+                <div class="sheet-field">
+                    <i class="bi bi-pencil"></i>
+                    <input type="text" name="Note" class="sheet-input" placeholder="Add note... (e.g. Lunch at Bistro)" />
+                </div>
+
+                <div style="text-align: center; font-size: 0.82rem; color: var(--text-muted); margin: 6px 0 12px;">
+                    <i class="bi bi-clock"></i> Today &bull; @DateTime.Now.ToString("h:mm tt")
+                </div>
+
+                <!-- Big Primary Save Button -->
+                <button type="submit" class="btn-save-main">SAVE</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Core App JS -->
+    <script src="~/js/app.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

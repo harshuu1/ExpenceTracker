@@ -1,0 +1,205 @@
+@model PaisaFlow.Core.Entities.SplitGroup
+@{
+    ViewData["Title"] = "Split Expenses with Friends";
+    var groups = ViewBag.Groups as List<PaisaFlow.Core.Entities.SplitGroup> ?? new();
+    var settlement = ViewBag.Settlement as PaisaFlow.Core.DTOs.GroupSettlementResultDto ?? new();
+}
+
+<div class="ios-header">
+    <div>
+        <a asp-controller="Dashboard" asp-action="Index" class="section-link" style="font-size: 0.95rem;">‹ Dashboard</a>
+        <div class="user-name" style="margin-top: 4px;">@(Model?.Name ?? "Split with Friends")</div>
+    </div>
+    <div class="header-actions">
+        <button type="button" class="icon-btn-glass" onclick="document.getElementById('newGroupModal').classList.add('show')" title="New Group">
+            <i class="bi bi-people-fill"></i>
+        </button>
+        <button type="button" class="icon-btn-glass" onclick="document.getElementById('addSplitExpenseModal').classList.add('show')" title="Add Group Expense">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+    </div>
+</div>
+
+@if (Model == null)
+{
+    <div class="glass-card" style="padding: 40px 20px; text-align: center; border-radius: 28px;">
+        <div style="font-size: 2.5rem; margin-bottom: 12px;">🌴</div>
+        <div style="font-size: 1.2rem; font-weight: 700;">No Split Groups Yet</div>
+        <div style="font-size: 0.88rem; color: var(--text-muted); margin: 6px 0 16px;">Create a trip or outing with friends to split costs.</div>
+        <button type="button" class="btn-save-main" onclick="document.getElementById('newGroupModal').classList.add('show')">Create Trip</button>
+    </div>
+}
+else
+{
+    <!-- Group Overview Hero Card -->
+    <div class="glass-card balance-card">
+        <div class="balance-title">
+            <span>🌴 @Model.Name</span>
+            <span style="font-size: 0.85rem; color: var(--accent-blue); font-weight: 600;">@Model.Members.Count Friends</span>
+        </div>
+
+        <div class="balance-amount">
+            ₹@settlement.TotalExpenses.ToString("N0")
+        </div>
+
+        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+            ₹@settlement.PerPersonShare.ToString("N0") per person (equal share)
+        </div>
+
+        <div class="income-expense-divider"></div>
+
+        <!-- Member breakdown -->
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+            @foreach (var member in Model.Members)
+            {
+                var paid = member.ExpensesPaid.Sum(e => e.Amount);
+                var net = settlement.NetBalances.ContainsKey(member.Name) ? settlement.NetBalances[member.Name] : 0m;
+
+                <div class="glass-card" style="padding: 10px 14px; border-radius: 16px; background: var(--glass-bg-subtle);">
+                    <div style="font-size: 0.88rem; font-weight: 700; display: flex; justify-content: space-between;">
+                        <span>@member.Name</span>
+                        <span style="font-size: 0.78rem; color: @(net >= 0 ? "var(--accent-green)" : "var(--accent-red)");">
+                            @(net >= 0 ? "+" : "")₹@net.ToString("N0")
+                        </span>
+                    </div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
+                        Paid: ₹@paid.ToString("N0")
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Optimal Settlements Card (The Star Feature!) -->
+    <div class="section-header">
+        <h2 class="section-title">Calculated Settlements</h2>
+    </div>
+
+    <div class="glass-card" style="padding: 18px 20px; border-radius: 26px; margin-bottom: 24px;">
+        @if (!settlement.Settlements.Any())
+        {
+            <div style="text-align: center; color: var(--accent-green); font-weight: 600; padding: 12px;">
+                🎉 All expenses are settled up!
+            </div>
+        }
+        else
+        {
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+                @foreach (var s in settlement.Settlements)
+                {
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px dashed var(--glass-border);">
+                        <div>
+                            <div style="font-size: 0.98rem; font-weight: 700;">
+                                <span style="color: var(--accent-red);">@s.FromMemberName</span>
+                                <span style="color: var(--text-muted); font-size: 0.85rem; margin: 0 4px;">→</span>
+                                <span style="color: var(--accent-green);">@s.ToMemberName</span>
+                            </div>
+                            <div style="font-size: 0.78rem; color: var(--text-muted);">
+                                UPI: @(s.ToUpiId ?? "harsh@okaxis")
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">₹@s.Amount.ToString("N0")</span>
+                            <a href="@s.UpiPaymentUrl" class="quick-add-btn" style="background: linear-gradient(135deg, #10B981, #059669); text-decoration: none; padding: 6px 12px; font-size: 0.8rem;">
+                                📱 Pay UPI
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Expenses List -->
+    <div class="section-header">
+        <h2 class="section-title">Group Expenses</h2>
+    </div>
+
+    <div class="tx-list">
+        @foreach (var exp in Model.Expenses.OrderByDescending(e => e.Date))
+        {
+            <div class="glass-card tx-row">
+                <div class="tx-left">
+                    <div class="tx-icon-circle">🌴</div>
+                    <div class="tx-meta">
+                        <div class="tx-title">@exp.Title</div>
+                        <div class="tx-sub">Paid by @exp.PaidByMember?.Name &bull; @exp.Date.ToString("MMM d")</div>
+                    </div>
+                </div>
+                <div class="tx-right">
+                    <div class="tx-amount expense">₹@exp.Amount.ToString("N0")</div>
+                    <div class="tx-method-pill">4 way split</div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<!-- Modal: New Split Group -->
+<div id="newGroupModal" class="ios-modal-backdrop">
+    <div class="ios-bottom-sheet glass-card">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <div class="sheet-title">Create Split Group</div>
+            <button type="button" class="icon-btn-glass" onclick="document.getElementById('newGroupModal').classList.remove('show')" style="width: 36px; height: 36px;">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <form asp-controller="Split" asp-action="CreateGroup" method="post">
+            @Html.AntiForgeryToken()
+            <div class="sheet-field">
+                <i class="bi bi-geo-alt"></i>
+                <input type="text" name="name" class="sheet-input" placeholder="Group Name (e.g. Trip to Manali)" required />
+            </div>
+            <div class="sheet-field">
+                <i class="bi bi-people"></i>
+                <input type="text" name="members" class="sheet-input" placeholder="Friends (comma separated: Amit, Rahul, Akash)" required />
+            </div>
+            <div class="sheet-field">
+                <i class="bi bi-upc-scan"></i>
+                <input type="text" name="upiId" class="sheet-input" placeholder="Your UPI ID for receiving settlements" />
+            </div>
+            <button type="submit" class="btn-save-main" style="margin-top: 10px;">CREATE GROUP</button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Add Group Expense -->
+@if (Model != null)
+{
+    <div id="addSplitExpenseModal" class="ios-modal-backdrop">
+        <div class="ios-bottom-sheet glass-card">
+            <div class="sheet-handle"></div>
+            <div class="sheet-header">
+                <div class="sheet-title">Add Group Expense</div>
+                <button type="button" class="icon-btn-glass" onclick="document.getElementById('addSplitExpenseModal').classList.remove('show')" style="width: 36px; height: 36px;">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <form asp-controller="Split" asp-action="AddExpense" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="groupId" value="@Model.Id" />
+
+                <div class="sheet-field">
+                    <i class="bi bi-pencil"></i>
+                    <input type="text" name="title" class="sheet-input" placeholder="Expense Title (e.g. Dinner, Fuel)" required />
+                </div>
+                <div class="sheet-field">
+                    <i class="bi bi-currency-rupee"></i>
+                    <input type="number" step="0.01" name="amount" class="sheet-input" placeholder="Amount (₹)" required />
+                </div>
+                <div class="sheet-field">
+                    <i class="bi bi-person-check"></i>
+                    <select name="paidByMemberId" class="sheet-select">
+                        @foreach (var m in Model.Members)
+                        {
+                            <option value="@m.Id">Paid by @m.Name</option>
+                        }
+                    </select>
+                </div>
+                <button type="submit" class="btn-save-main" style="margin-top: 10px;">SAVE GROUP EXPENSE</button>
+            </form>
+        </div>
+    </div>
+}

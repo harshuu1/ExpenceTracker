@@ -1,0 +1,124 @@
+@model List<PaisaFlow.Core.Entities.Transaction>
+@{
+    ViewData["Title"] = "Transaction History";
+    var filter = ViewBag.Filter as PaisaFlow.Core.DTOs.TransactionFilterDto ?? new PaisaFlow.Core.DTOs.TransactionFilterDto();
+    var categories = ViewBag.Categories as List<PaisaFlow.Core.Entities.Category> ?? new();
+    var accounts = ViewBag.Accounts as List<PaisaFlow.Core.Entities.Account> ?? new();
+
+    var groupedTxs = Model.GroupBy(t => t.Date.Date).OrderByDescending(g => g.Key);
+}
+
+<div class="ios-header">
+    <div>
+        <a asp-controller="Dashboard" asp-action="Index" class="section-link" style="font-size: 0.95rem;">‹ Dashboard</a>
+        <div class="user-name" style="margin-top: 4px;">Activity History</div>
+    </div>
+    <div class="header-actions">
+        <a asp-controller="Export" asp-action="Csv" class="icon-btn-glass" title="Export CSV">
+            <i class="bi bi-filetype-csv"></i>
+        </a>
+        <button type="button" class="icon-btn-glass" data-open-add-expense title="Add Expense">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Search & Filter Form -->
+<form asp-controller="Transactions" asp-action="Index" method="get" class="glass-card" style="padding: 14px 16px; margin-bottom: 20px; border-radius: 24px;">
+    <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+        <div style="position: relative; flex: 1;">
+            <i class="bi bi-search" style="position: absolute; left: 12px; top: 12px; color: var(--text-muted);"></i>
+            <input type="text" name="Query" value="@filter.Query" class="sheet-input" placeholder="Search grocery, ₹500, UPI..." style="padding-left: 36px; background: var(--glass-bg-subtle); border-radius: var(--pill-radius); padding-top: 10px; padding-bottom: 10px;" />
+        </div>
+        <button type="submit" class="quick-add-btn" style="padding: 0 16px;">Search</button>
+    </div>
+
+    <!-- Quick filter chips -->
+    <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;">
+        <select name="CategoryId" class="sheet-select" onchange="this.form.submit()" style="background: var(--glass-bg-subtle); border-radius: var(--pill-radius); padding: 6px 12px; font-size: 0.8rem; width: auto;">
+            <option value="">All Categories</option>
+            @foreach (var c in categories)
+            {
+                <option value="@c.Id" selected="@(filter.CategoryId == c.Id)">@c.Icon @c.Name</option>
+            }
+        </select>
+
+        <select name="PaymentMethod" class="sheet-select" onchange="this.form.submit()" style="background: var(--glass-bg-subtle); border-radius: var(--pill-radius); padding: 6px 12px; font-size: 0.8rem; width: auto;">
+            <option value="">All Methods</option>
+            <option value="UPI" selected="@(filter.PaymentMethod == "UPI")">UPI</option>
+            <option value="Cash" selected="@(filter.PaymentMethod == "Cash")">Cash</option>
+            <option value="Credit Card" selected="@(filter.PaymentMethod == "Credit Card")">Credit Card</option>
+            <option value="Bank Transfer" selected="@(filter.PaymentMethod == "Bank Transfer")">Bank Transfer</option>
+        </select>
+
+        <select name="Type" class="sheet-select" onchange="this.form.submit()" style="background: var(--glass-bg-subtle); border-radius: var(--pill-radius); padding: 6px 12px; font-size: 0.8rem; width: auto;">
+            <option value="">All Types</option>
+            <option value="1" selected="@(filter.Type == PaisaFlow.Core.Enums.TransactionType.Expense)">Expense</option>
+            <option value="2" selected="@(filter.Type == PaisaFlow.Core.Enums.TransactionType.Income)">Income</option>
+        </select>
+    </div>
+</form>
+
+<!-- Grouped Transactions Timeline -->
+@if (!Model.Any())
+{
+    <div class="glass-card" style="padding: 40px 20px; text-align: center; border-radius: 28px;">
+        <div style="font-size: 2.5rem; margin-bottom: 10px;">🔍</div>
+        <div style="font-size: 1.1rem; font-weight: 700;">No transactions found</div>
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Try modifying your search or filters.</div>
+    </div>
+}
+else
+{
+    @foreach (var group in groupedTxs)
+    {
+        var groupDateStr = group.Key == DateTime.Today ? "Today" : (group.Key == DateTime.Today.AddDays(-1) ? "Yesterday" : group.Key.ToString("MMMM d"));
+        var groupDaySpend = group.Where(t => t.Type == PaisaFlow.Core.Enums.TransactionType.Expense).Sum(t => t.Amount);
+
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin: 18px 8px 8px;">
+            <span style="font-size: 0.88rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">@groupDateStr</span>
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">₹@groupDaySpend.ToString("N0") spent</span>
+        </div>
+
+        <div class="tx-list">
+            @foreach (var tx in group)
+            {
+                var isIncome = tx.Type == PaisaFlow.Core.Enums.TransactionType.Income;
+                var icon = tx.Category?.Icon ?? (isIncome ? "💼" : "💸");
+                var title = !string.IsNullOrWhiteSpace(tx.Note) ? tx.Note : (tx.Category?.Name ?? "Transaction");
+                var categoryName = tx.Category?.Name ?? "General";
+
+                <div class="glass-card tx-row">
+                    <div class="tx-left">
+                        <div class="tx-icon-circle">@icon</div>
+                        <div class="tx-meta">
+                            <div class="tx-title">@title</div>
+                            <div class="tx-sub">
+                                <span>@categoryName</span> &bull; 
+                                <span>@tx.PaymentMethod</span>
+                                @if (tx.Account != null)
+                                {
+                                    <span>(@tx.Account.Name)</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tx-right">
+                        <div class="tx-amount @(isIncome ? "income" : "expense")">
+                            @(isIncome ? "+ " : "")₹@tx.Amount.ToString("N0")
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                            <span class="tx-method-pill">@tx.Date.ToString("h:mm tt")</span>
+                            <form asp-controller="Transactions" asp-action="Delete" asp-route-id="@tx.Id" method="post" onsubmit="return confirm('Delete this transaction?');" style="display: inline;">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0 4px;" title="Delete">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+}
