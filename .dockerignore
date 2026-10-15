@@ -1,0 +1,12 @@
+**/.git
+**/.vs
+**/bin
+**/obj
+**/TestResults
+**/*.user
+**/*.suo
+*.db
+*.db-shm
+*.db-wal
+*_cookie.txt
+test_*.ps1

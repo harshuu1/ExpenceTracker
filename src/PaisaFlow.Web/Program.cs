@@ -6,6 +6,13 @@ using PaisaFlow.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Dynamic Port binding for Cloud Hosting (Render, Railway, Heroku)
+var envPort = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(envPort))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{envPort}");
+}
+
 // Add services to the container.
 builder.Services.AddControllersWithViews()
     .AddRazorRuntimeCompilation();
